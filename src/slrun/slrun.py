@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import time
+import toml
 import uuid
 import signal
 import shutil
@@ -15,7 +16,136 @@ from pathlib import Path
 # Directory to store job information
 SLRUN_DIR = Path.home() / ".slrun"
 
+def load_config():
+    """Load configuration from global and local config files."""
+    config = {
+        "defaults": {
+            "time": "1-00:00:00",
+            "mem": "64GB",
+            "gres": "gpu:A6000:1",
+            # Other defaults...
+        },
+        "profiles": {}
+    }
+    
+    # Try global config
+    global_config_path = Path.home() / ".slrun" / "config.toml"
+    if global_config_path.exists():
+        try:
+            global_config = toml.load(str(global_config_path))
+            # Merge with defaults
+            config.update(global_config)
+        except Exception as e:
+            print(f"Warning: Could not load global config: {e}", file=sys.stderr)
+    
+    # Try local config (optional, would override global)
+    local_config_path = Path(".slrun.toml")
+    if local_config_path.exists():
+        try:
+            local_config = toml.load(str(local_config_path))
+            # Merge with current config
+            config.update(local_config)
+        except Exception as e:
+            print(f"Warning: Could not load local config: {e}", file=sys.stderr)
+    
+    return config
+
+def show_config():
+    """Display the current configuration."""
+    global_config_path = Path.home() / ".slrun" / "config.toml"
+    local_config_path = Path(".slrun.toml")
+    
+    print(f"\nslrun Configuration:")
+    print(f"{'-' * 50}")
+    
+    # Show global configuration
+    if global_config_path.exists():
+        try:
+            global_config = toml.load(str(global_config_path))
+            print(f"\nGlobal config ({global_config_path}):")
+            print_config(global_config)
+        except Exception as e:
+            print(f"Error reading global config: {e}")
+    else:
+        print(f"\nNo global configuration found at {global_config_path}")
+        print(f"You can create one with 'slrun config edit'")
+    
+    # Show local configuration if it exists
+    if local_config_path.exists():
+        try:
+            local_config = toml.load(str(local_config_path))
+            print(f"\nLocal config ({local_config_path}):")
+            print_config(local_config)
+        except Exception as e:
+            print(f"Error reading local config: {e}")
+    
+    # Show effective configuration (the result of merging global and local)
+    config = load_config()
+    print(f"\nEffective configuration (merged):")
+    print_config(config)
+    
+    return 0
+
+def print_config(config):
+    """Helper function to print a configuration in a readable format."""
+    if "defaults" in config:
+        print("  [defaults]")
+        for key, value in sorted(config["defaults"].items()):
+            print(f"    {key} = {repr(value)}")
+    
+    if "profiles" in config:
+        print("  [profiles]")
+        for profile_name, profile in sorted(config["profiles"].items()):
+            print(f"    [{profile_name}]")
+            for key, value in sorted(profile.items()):
+                print(f"      {key} = {repr(value)}")
+    
+    # Print any other top-level sections that might exist
+    for section, content in sorted(config.items()):
+        if section not in ["defaults", "profiles"] and isinstance(content, dict):
+            print(f"  [{section}]")
+            for key, value in sorted(content.items()):
+                print(f"    {key} = {repr(value)}")
+
+def edit_config():
+    """Open the config file in the user's editor."""
+    config_path = Path.home() / ".slrun" / "config.toml"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    if not config_path.exists():
+        # Create a template config file
+        with open(config_path, "w") as f:
+            f.write("""# slrun configuration file
+[defaults]
+# Default values for SLURM job parameters
+time = "1-00:00:00"
+mem = "64GB"
+gres = "gpu:A6000:1"
+timeout = 86400
+
+# Optional profiles for different job types
+[profiles.small]
+time = "0-01:00:00"
+mem = "16GB"
+gres = "gpu:A6000:1"
+
+[profiles.large]
+time = "7-00:00:00"
+mem = "64GB"
+gres = "gpu:A100_40GB:4"
+            """)
+
+    # Open with the user's editor
+    editor = os.environ.get("EDITOR", "vim")
+    subprocess.run([editor, str(config_path)])
+    return 0
+
+
 def parse_args():
+    # Load configuration first
+    config = load_config()
+    defaults = config.get("defaults", {})
+
     # First, handle the special case for launch subcommand
     if len(sys.argv) > 1 and sys.argv[1] == 'launch':
         # Find the -- delimiter if present
@@ -44,15 +174,18 @@ def parse_args():
     
     # Launch command
     launch_parser = subparsers.add_parser('launch', help='Launch a new job')
-    launch_parser.add_argument('--time', '-t', default='1-00:00:00', help='Wall clock time limit')
-    launch_parser.add_argument('--mem', '-m', default='64GB', help='Memory requirement')
-    launch_parser.add_argument('--gres', '-g', default='gpu:A6000:1', help='Generic resources')
+    launch_parser.add_argument('--time', '-t', default=defaults.get('time', '1-00:00:00'), help='Wall clock time limit')
+    launch_parser.add_argument('--mem', '-m', default=defaults.get('mem', '64GB'), help='Memory requirement')
+    launch_parser.add_argument('--gres', '-g', default=defaults.get('gres', 'gpu:A6000:1'), help='Generic resources')
     launch_parser.add_argument('--nodelist', help='Nodes to use')
     launch_parser.add_argument('--exclude', help='Nodes to avoid')
-    launch_parser.add_argument('--conda-env', '-c', help='Conda env (default: current)')
-    launch_parser.add_argument('--timeout', default=86400, type=int, help='Local timeout in seconds (default: 24h)')
+    launch_parser.add_argument('--conda-env', '-c', default=defaults.get('conda_env'), help='Conda env (default: current)')
+    launch_parser.add_argument('--timeout', default=defaults.get('timeout', 86400), type=int, help='Local timeout in seconds (default: 24h)')
+    launch_parser.add_argument('--profile', '-p', help='Use a predefined configuration profile')
     if not use_delimiter:
         launch_parser.add_argument('cmd', nargs=argparse.REMAINDER, help='Command to run')
+
+    # Add profile support
     
     # Attach command
     attach_parser = subparsers.add_parser('attach', help='Attach to an existing job')
@@ -60,6 +193,10 @@ def parse_args():
     
     # List command
     subparsers.add_parser('list', help='List all detached jobs')
+
+    # Config command
+    config_parser = subparsers.add_parser('config', help='Edit or manage configuration')
+    config_parser.add_argument('action', choices=['edit', 'show'], help='Action to perform on config')
     
     if use_delimiter:
         # Parse only slrun args and set cmd explicitly
@@ -71,6 +208,61 @@ def parse_args():
         # For launch, ensure we have a command
         if args.command == 'launch' and (not hasattr(args, 'cmd') or not args.cmd):
             launch_parser.error("No command specified to run")
+
+
+    # Only handle profiles and node lists for the launch command
+    if args.command == 'launch':
+        # Apply profile if specified
+        if hasattr(args, 'profile') and args.profile:
+            profiles = config.get("profiles", {})
+            if args.profile in profiles:
+                profile = profiles[args.profile]
+                # Apply profile values for regular options
+                for key, value in profile.items():
+                    if key not in ['nodelist', 'exclude'] and key in vars(args) and not is_arg_explicit(key, sys.argv):
+                        setattr(args, key, value)
+        
+        # Handle special union case for nodelist and exclude
+        profile_dict = {}
+        if hasattr(args, 'profile') and args.profile:
+            profile_dict = config.get("profiles", {}).get(args.profile, {})
+        args = handle_node_lists(args, defaults, profile_dict)
+    
+    return args
+
+def is_arg_explicit(key, argv):
+    """Check if an argument was explicitly provided on command line."""
+    arg_forms = [f'--{key}', f'-{key[0]}']
+    return any(arg in argv for arg in arg_forms)
+
+def handle_node_lists(args, defaults, profile):
+    """Handle the special case of nodelist and exclude which should be combined from all sources."""
+    
+    # Function to parse a comma-separated list into a set of nodes
+    def parse_node_list(value):
+        if not value:
+            return set()
+        return set(node.strip() for node in value.split(',') if node.strip())
+    
+    # Function to convert a set back to a comma-separated list
+    def format_node_list(nodes):
+        return ','.join(sorted(nodes)) if nodes else None
+    
+    # Handle nodelist
+    cmd_nodelist = parse_node_list(args.nodelist)
+    config_nodelist = parse_node_list(profile.get('nodelist', defaults.get('nodelist', '')))
+    
+    # Union the sets of nodes
+    final_nodelist = cmd_nodelist.union(config_nodelist)
+    args.nodelist = format_node_list(final_nodelist)
+    
+    # Handle exclude
+    cmd_exclude = parse_node_list(args.exclude)
+    config_exclude = parse_node_list(profile.get('exclude', defaults.get('exclude', '')))
+    
+    # Union the sets of excluded nodes
+    final_exclude = cmd_exclude.union(config_exclude)
+    args.exclude = format_node_list(final_exclude)
     
     return args
 
@@ -585,6 +777,11 @@ def main():
         return attach_to_job(args.job_id)
     elif args.command == 'launch':
         return launch_job(args)
+    elif args.command == 'config':
+        if args.action == 'edit':
+            return edit_config()
+        elif args.action == 'show':
+            return show_config()
     else:
         print(f"Unknown command: {args.command}", file=sys.stderr)
         return 1

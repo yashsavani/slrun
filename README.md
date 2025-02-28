@@ -8,6 +8,7 @@ Run commands on SLURM as if they were local, with seamless detach/reattach capab
 - **Real-time output streaming**: See stdout/stderr as if running locally
 - **Detach/reattach capability**: Start a job, detach, and reconnect later
 - **Job management**: List all detached jobs and their statuses
+- **Configuration profiles**: Store different resource configurations in config file
 - **Automatic cleanup**: Temporary files are removed when jobs complete
 
 ## Installation
@@ -44,6 +45,12 @@ slrun launch python train_model.py --epochs 100
 slrun launch --mem 128GB --time 2-00:00:00 --gres gpu:A100:2 python train_model.py
 ```
 
+### Using a configuration profile
+
+```bash
+slrun launch --profile large python train_model.py
+```
+
 ### Handling argument conflicts
 
 When your command uses arguments that might conflict with `slrun`, use the `--` separator:
@@ -62,6 +69,37 @@ slrun list
 
 ```bash
 slrun attach 12345  # Replace with your job ID
+```
+
+## Configuration
+
+You can customize default settings by creating a configuration file:
+
+```bash
+# Edit your configuration file
+slrun config edit
+
+# View your current configuration
+slrun config show
+```
+
+Example configuration (`~/.slrun/config.toml`):
+
+```toml
+[defaults]
+time = "2-00:00:00"
+mem = "128GB"
+gres = "gpu:A100:1"
+
+[profiles.large]
+time = "7-00:00:00"
+mem = "256GB"
+gres = "gpu:A100:4"
+
+[profiles.debug]
+time = "0-01:00:00"
+mem = "16GB"
+gres = "gpu:K80:1"
 ```
 
 ## Development
