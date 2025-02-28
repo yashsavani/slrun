@@ -1,3 +1,7 @@
 """Tools for running commands on SLURM as if local."""
 
-__version__ = "0.1.3"
+from importlib.metadata import version, PackageNotFoundError
+try:
+    __version__ = version("slrun")
+except PackageNotFoundError:
+    __version__ = "dev"
