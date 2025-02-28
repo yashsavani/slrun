@@ -2,11 +2,11 @@
 """CLI entry point for srun command."""
 
 import sys
-from slrun.srun import main as srun_main
+from slrun.slrun import main as slrun_main
 
 def main():
     """Entry point for the srun command."""
-    return srun_main()
+    return slrun_main()
 
 if __name__ == "__main__":
     sys.exit(main())

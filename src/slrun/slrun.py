@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run commands on SLURM as if local with srun.py launch <command>"""
+"""Run commands on SLURM as if local with slrun.py launch <command>"""
 
 import argparse
 import json
@@ -13,7 +13,7 @@ import shutil
 from pathlib import Path
 
 # Directory to store job information
-SRUN_DIR = Path.home() / ".srun"
+SLRUN_DIR = Path.home() / ".slrun"
 
 def parse_args():
     # First, handle the special case for launch subcommand
@@ -21,7 +21,7 @@ def parse_args():
         # Find the -- delimiter if present
         try:
             delimiter_index = sys.argv.index('--', 2)  # Start search after 'launch'
-            srun_args = sys.argv[:delimiter_index]
+            slrun_args = sys.argv[:delimiter_index]
             cmd_args = sys.argv[delimiter_index+1:]
             if not cmd_args:
                 print("Error: No command specified after --", file=sys.stderr)
@@ -29,12 +29,12 @@ def parse_args():
             use_delimiter = True
         except ValueError:
             # No -- delimiter found, process normally
-            srun_args = sys.argv
+            slrun_args = sys.argv
             cmd_args = []
             use_delimiter = False
     else:
         # Not a launch command or no -- delimiter
-        srun_args = sys.argv
+        slrun_args = sys.argv
         cmd_args = []
         use_delimiter = False
 
@@ -62,8 +62,8 @@ def parse_args():
     subparsers.add_parser('list', help='List all detached jobs')
     
     if use_delimiter:
-        # Parse only srun args and set cmd explicitly
-        args = parser.parse_args(srun_args)
+        # Parse only slrun args and set cmd explicitly
+        args = parser.parse_args(slrun_args)
         args.cmd = cmd_args
     else:
         args = parser.parse_args()
@@ -75,9 +75,9 @@ def parse_args():
     return args
 
 def save_job_info(job_id, temp_dir, output_log, error_log, command):
-    """Save job information to ~/.srun directory"""
-    # Create SRUN_DIR if it doesn't exist
-    SRUN_DIR.mkdir(parents=True, exist_ok=True)
+    """Save job information to ~/.slrun directory"""
+    # Create SLRUN_DIR if it doesn't exist
+    SLRUN_DIR.mkdir(parents=True, exist_ok=True)
     
     job_info = {
         'job_id': job_id,
@@ -88,15 +88,15 @@ def save_job_info(job_id, temp_dir, output_log, error_log, command):
         'detach_time': time.time()
     }
     
-    job_file = SRUN_DIR / f"{job_id}.json"
+    job_file = SLRUN_DIR / f"{job_id}.json"
     with job_file.open('w') as f:
         json.dump(job_info, f, indent=2)
     
     return job_file
 
 def load_job_info(job_id):
-    """Load job information from ~/.srun directory"""
-    job_file = SRUN_DIR / f"{job_id}.json"
+    """Load job information from ~/.slrun directory"""
+    job_file = SLRUN_DIR / f"{job_id}.json"
     
     if not job_file.exists():
         print(f"No information found for job {job_id}", file=sys.stderr)
@@ -111,16 +111,16 @@ def load_job_info(job_id):
 
 def remove_job_info(job_id):
     """Remove job information file"""
-    job_file = SRUN_DIR / f"{job_id}.json"
+    job_file = SLRUN_DIR / f"{job_id}.json"
     if job_file.exists():
         job_file.unlink()
 
 def list_jobs():
     """List all detached jobs"""
-    # Create SRUN_DIR if it doesn't exist
-    SRUN_DIR.mkdir(parents=True, exist_ok=True)
+    # Create SLRUN_DIR if it doesn't exist
+    SLRUN_DIR.mkdir(parents=True, exist_ok=True)
     
-    job_files = list(SRUN_DIR.glob("*.json"))
+    job_files = list(SLRUN_DIR.glob("*.json"))
     if not job_files:
         print("No detached jobs found.")
         return 0
@@ -298,7 +298,7 @@ def launch_job(args):
     
     # Create temp directory in current working directory
     run_id = f"{int(time.time())}_{uuid.uuid4().hex[:8]}"
-    temp_dir = Path(f".srun_tmp_{run_id}")
+    temp_dir = Path(f".slrun_tmp_{run_id}")
     temp_dir.mkdir(parents=True)
     log_dir = temp_dir / "logs"
     log_dir.mkdir()
@@ -354,7 +354,7 @@ source $HOME/.bashrc
         
         sbatch_cmd = [
             'sbatch', '--parsable', 
-            '--job-name', f"srun_{os.getenv('USER', 'user')}",
+            '--job-name', f"slrun_{os.getenv('USER', 'user')}",
             '--time', args.time, '--mem', args.mem, '--gres', args.gres,
             '--output', str(output_log.absolute()), '--error', str(error_log.absolute()),
             '--chdir', os.getcwd(),

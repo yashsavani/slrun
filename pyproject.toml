@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "slrun"  # Changed from "slurm-tools" to "slrun"
-version = "0.1.0"
+version = "0.1.1"
 description = "Run commands on SLURM as if local with seamless detach/reattach"
 readme = "README.md"
 authors = [
@@ -24,8 +24,8 @@ requires-python = ">=3.6"
 dependencies = []  # Add any dependencies if needed
 
 [project.urls]
-"Homepage" = "https://github.com/yashsavani/slurm-tools"
-"Bug Tracker" = "https://github.com/yashsavani/slurm-tools/issues"
+"Homepage" = "https://github.com/yashsavani/slrun"
+"Bug Tracker" = "https://github.com/yashsavani/slrun/issues"
 
 [project.scripts]
 slrun = "slrun.cli:main"  # This creates a 'slrun' command

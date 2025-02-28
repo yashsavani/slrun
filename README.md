@@ -15,13 +15,13 @@ Run commands on SLURM as if they were local, with seamless detach/reattach capab
 ### Using UV (recommended)
 
 ```bash
-uv pip install slrun
+uv add slrun
 ```
 
 ### Directly from GitHub
 
 ```bash
-uv pip install git+https://github.com/yashsavani/slurm-tools.git
+uv pip install git+https://github.com/yashsavani/slrun.git
 ```
 
 ### Using pip
@@ -70,7 +70,7 @@ slrun attach 12345  # Replace with your job ID
 
 ```bash
 # Clone the repository
-git clone https://github.com/yashsavani/slurm-tools.git
+git clone https://github.com/yashsavani/slrun.git
 cd slurm-tools
 
 # Install in development mode

@@ -87,7 +87,7 @@ slrun launch --timeout 7200 -- python script.py --timeout 3600
 
 1. **Job Submission**: Creates a temporary directory with a shell script that runs your command
 2. **Real-time Monitoring**: Continuously polls the job status and streams the output
-3. **Detach Capability**: When you detach, job information is saved to `~/.srun/`
+3. **Detach Capability**: When you detach, job information is saved to `~/.slrun/`
 4. **Reattach Capability**: Reconnects to the job using the saved information
 5. **Cleanup**: Removes temporary files when the job completes
 
@@ -106,7 +106,7 @@ Press `Ctrl+Z` to detach from a running job. The job continues running, and you'
 List all detached jobs with their status:
 
 ```bash
-srun list
+slrun list
 ```
 
 Output shows job IDs, statuses, detach times, and commands.
@@ -127,13 +127,13 @@ No cleanup occurs when you detach from a job, allowing later reattachment.
 For jobs expected to run for days:
 1. Launch with a generous time limit: `--time 7-00:00:00`
 2. Detach once you confirm it's running correctly
-3. Periodically check status with `srun list`
+3. Periodically check status with `slrun list`
 4. Reattach as needed to check progress
 
 ### Handling Job Failures
 
 If a job fails:
-1. Reattach to view the error output: `srun attach <job_id>`
+1. Reattach to view the error output: `slrun attach <job_id>`
 2. After reviewing errors, the temporary files will be cleaned up
 
 ### Working with Multiple Jobs
@@ -142,14 +142,14 @@ Launch multiple jobs and manage them easily:
 
 ```bash
 # Start multiple jobs
-srun launch --mem 32GB -- python job1.py
+slrun launch --mem 32GB -- python job1.py
 # Detach with Ctrl+Z when it's running
-srun launch --mem 32GB -- python job2.py
+slrun launch --mem 32GB -- python job2.py
 # Detach with Ctrl+Z when it's running
 
 # Check all jobs
-srun list
+slrun list
 
 # Attach to specific job
-srun attach <job_id>
+slrun attach <job_id>
 ```
