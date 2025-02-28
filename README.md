@@ -15,7 +15,7 @@ Run commands on SLURM as if they were local, with seamless detach/reattach capab
 ### Using UV (recommended)
 
 ```bash
-uv pip install slurm-tools
+uv pip install slrun
 ```
 
 ### Directly from GitHub
@@ -27,7 +27,7 @@ uv pip install git+https://github.com/yashsavani/slurm-tools.git
 ### Using pip
 
 ```bash
-pip install slurm-tools
+pip install slrun
 ```
 
 ## Quick Start

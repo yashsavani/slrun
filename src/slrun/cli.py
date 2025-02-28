@@ -2,7 +2,7 @@
 """CLI entry point for srun command."""
 
 import sys
-from slurm_tools.srun import main as srun_main
+from slrun.srun import main as srun_main
 
 def main():
     """Entry point for the srun command."""
