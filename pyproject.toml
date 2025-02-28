@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "slurm-tools"
+version = "0.1.0"
+description = "Run commands on SLURM as if local with seamless detach/reattach"
+readme = "README.md"
+authors = [
+    {name = "Yash Savani", email = "yash.savani@gmail.com"}
+]
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: System :: Clustering",
+]
+keywords = ["slurm", "cluster", "hpc", "scheduler"]
+requires-python = ">=3.6"
+dependencies = []  # Add any dependencies if needed
+
+[project.urls]
+"Homepage" = "https://github.com/yashsavani/slurm-tools"
+"Bug Tracker" = "https://github.com/yashsavani/slurm-tools/issues"
+
+[project.scripts]
+slrun = "slurm_tools.cli:main"  # This creates a 'slrun' command
+
+[dependency-groups]
+dev = [
+    "hatchling>=0.22.0",
+]
