@@ -196,6 +196,14 @@ def attach_to_job(job_id):
         if signum:
             print(f"\nInterrupted, cleaning up...", file=sys.stderr)
         if not detached:  # Only clean up if we didn't detach
+            # First cancel the SLURM job
+            print(f"Canceling job {job_id}...", file=sys.stderr)
+            subprocess.run(['scancel', job_id], stderr=subprocess.DEVNULL)
+            
+            # Wait a moment for SLURM to process the cancellation
+            time.sleep(1)
+            
+            # Then clean up files
             shutil.rmtree(temp_dir, ignore_errors=True)
             remove_job_info(job_id)
         if signum:
@@ -308,6 +316,16 @@ def launch_job(args):
         if signum:
             print(f"\nInterrupted, cleaning up...", file=sys.stderr)
         if not detached:  # Only clean up if we didn't detach
+            # First cancel the SLURM job if it exists
+            if 'job_id' in locals() or 'job_id' in globals():
+                print(f"Canceling job {job_id}...", file=sys.stderr)
+                subprocess.run(['scancel', job_id], stderr=subprocess.DEVNULL)
+                # Wait a moment for SLURM to process the cancellation
+                time.sleep(1)
+                # Remove job info file
+                remove_job_info(job_id)
+            
+            # Then clean up temporary directory
             shutil.rmtree(temp_dir, ignore_errors=True)
         if signum:
             sys.exit(128 + signum)

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "slrun"  # Changed from "slurm-tools" to "slrun"
-version = "0.1.1"
+version = "0.1.2"
 description = "Run commands on SLURM as if local with seamless detach/reattach"
 readme = "README.md"
 authors = [
