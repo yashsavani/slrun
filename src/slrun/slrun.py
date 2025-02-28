@@ -74,6 +74,80 @@ def parse_args():
     
     return args
 
+def get_job_details(job_id):
+    """Get detailed information about a SLURM job."""
+    scontrol_cmd = ['scontrol', 'show', 'job', job_id]
+    result = subprocess.run(scontrol_cmd, capture_output=True, text=True)
+    
+    if result.returncode != 0:
+        return None
+        
+    job_info = {}
+    current_section = job_info
+    
+    # Parse scontrol output
+    for line in result.stdout.split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+            
+        parts = line.split()
+        for part in parts:
+            if '=' in part:
+                key, value = part.split('=', 1)
+                current_section[key] = value
+    
+    return job_info
+
+def format_job_status(job_info):
+    """Format job status information for display."""
+    if not job_info:
+        return "Job information not available"
+        
+    job_state = job_info.get('JobState', 'UNKNOWN')
+    
+    # Format common information
+    status_lines = [
+        f"Job ID: {job_info.get('JobId', 'Unknown')}",
+        f"State: {job_state}"
+    ]
+    
+    # Format state-specific information
+    if job_state == 'PENDING':
+        reason = job_info.get('Reason', 'Unknown')
+        status_lines.append(f"Reason: {reason}")
+        
+        if 'StartTime' in job_info and job_info['StartTime'] != 'N/A':
+            status_lines.append(f"Estimated start: {job_info['StartTime']}")
+            
+        if 'Priority' in job_info:
+            status_lines.append(f"Priority: {job_info['Priority']}")
+            
+    elif job_state == 'RUNNING':
+        # Add node information
+        if 'NodeList' in job_info:
+            status_lines.append(f"Running on: {job_info['NodeList']}")
+            
+        # Add timing information
+        if 'RunTime' in job_info:
+            status_lines.append(f"Runtime: {job_info['RunTime']}")
+            
+        if 'StartTime' in job_info:
+            status_lines.append(f"Started at: {job_info['StartTime']}")
+            
+        # Add resource allocation
+        if 'NumNodes' in job_info and 'NumCPUs' in job_info:
+            status_lines.append(f"Resources: {job_info['NumNodes']} node(s), {job_info['NumCPUs']} CPU(s)")
+            
+        if 'TRES' in job_info:
+            # Parse TRES to extract GPU information
+            tres = job_info['TRES']
+            if 'gres/gpu=' in tres:
+                gpu_info = tres.split('gres/gpu=')[1].split(',')[0]
+                status_lines.append(f"GPUs: {gpu_info}")
+    
+    return "\n".join(status_lines)
+
 def save_job_info(job_id, temp_dir, output_log, error_log, command):
     """Save job information to ~/.slrun directory"""
     # Create SLRUN_DIR if it doesn't exist
@@ -249,30 +323,48 @@ def attach_to_job(job_id):
         output_pos = read_output(output_log, sys.stdout, output_pos)
         error_pos = read_output(error_log, sys.stderr, error_pos)
         
+        dots_count = 0
+        last_state = None  # Initialize last_state here
         # Monitor job status and stream output
         while True:
-            # Check job status
-            status_cmd = ['sacct', '-j', job_id, '--format=State', '--noheader', '--parsable2']
-            result = subprocess.run(status_cmd, capture_output=True, text=True)
-            status = result.stdout.strip().split('\n')[0] if result.stdout else ""
-            
-            # Try squeue as an alternative if sacct doesn't show the job
-            if not status:
-                status_cmd = ['squeue', '-j', job_id, '--noheader', '--format=%T']
-                result = subprocess.run(status_cmd, capture_output=True, text=True)
-                status = result.stdout.strip() or ""
+            # Get detailed job information
+            job_details = get_job_details(job_id)
+            if job_details:
+                current_state = job_details.get('JobState', 'UNKNOWN')
+                
+                # Show job details when state changes
+                if current_state != last_state:
+                    print(f"\n{'-' * 40}", file=sys.stderr)
+                    print(format_job_status(job_details), file=sys.stderr)
+                    print(f"{'-' * 40}\n", file=sys.stderr)
+                    last_state = current_state
+            else:
+                current_state = None
             
             # Read new output
-            output_pos = read_output(output_log, sys.stdout, output_pos)
-            error_pos = read_output(error_log, sys.stderr, error_pos)
+            new_output = read_output(output_log, sys.stdout, output_pos)
+            new_error = read_output(error_log, sys.stderr, error_pos)
+
+            # Only print a dot if in PENDING state and no new output was displayed
+            if (current_state == 'PENDING' and 
+                new_output == output_pos and new_error == error_pos):
+                dots_count += 1
+                if dots_count % 80 == 0:  # Start new line every 80 dots
+                    print(".", file=sys.stderr)
+                else:
+                    print(".", end="", file=sys.stderr, flush=True)
+
+            output_pos = new_output
+            error_pos = new_error
             
             # Check if job completed or failed
-            if status in ['COMPLETED', 'FAILED', 'CANCELLED', 'TIMEOUT'] or not status:
+            if current_state in ['COMPLETED', 'FAILED', 'CANCELLED', 'TIMEOUT'] or not current_state:
                 # Final read to get remaining output
                 output_pos = read_output(output_log, sys.stdout, output_pos)
                 error_pos = read_output(error_log, sys.stderr, error_pos)
-                
-                print(f"\nJob {job_id} has {status.lower() if status else 'completed'}", file=sys.stderr)
+                if dots_count > 0:  # Add a newline if we were printing dots
+                    print(file=sys.stderr)
+                print(f"\nJob {job_id} has {current_state.lower() if current_state else 'completed'}", file=sys.stderr)
                 break
             
             time.sleep(0.5)
@@ -400,6 +492,7 @@ source $HOME/.bashrc
         output_pos = error_pos = 0
         dots_count = 0
         start_time = time.time()
+        last_state = None 
         
         def read_output(file_path, stream, pos):
             """Read new content from the file and return the new position.
@@ -425,24 +518,27 @@ source $HOME/.bashrc
                 print(f"\nTimeout after {args.timeout} seconds, cancelling job...", file=sys.stderr)
                 subprocess.run(['scancel', job_id], stderr=subprocess.DEVNULL)
                 return 124  # Standard timeout exit code
+
+            # Get detailed job information
+            job_details = get_job_details(job_id)
+            if job_details:
+                current_state = job_details.get('JobState', 'UNKNOWN')
                 
-            # Check job status
-            status_cmd = ['sacct', '-j', job_id, '--format=State', '--noheader', '--parsable2']
-            result = subprocess.run(status_cmd, capture_output=True, text=True)
-            status = result.stdout.strip().split('\n')[0] if result.stdout else ""
-            
-            # Try squeue as an alternative if sacct doesn't show the job
-            if not status:
-                status_cmd = ['squeue', '-j', job_id, '--noheader', '--format=%T']
-                result = subprocess.run(status_cmd, capture_output=True, text=True)
-                status = result.stdout.strip() or ""
-            
+                # Show job details when state changes
+                if current_state != last_state:
+                    print(f"\n{'-' * 40}", file=sys.stderr)
+                    print(format_job_status(job_details), file=sys.stderr)
+                    print(f"{'-' * 40}\n", file=sys.stderr)
+                    last_state = current_state
+            else:
+                current_state = None
+                
             # Read new output
             new_output = read_output(output_log, sys.stdout, output_pos)
             new_error = read_output(error_log, sys.stderr, error_pos)
             
             # Only print a dot if in PENDING state and no new output was displayed
-            if (status in ['PENDING', 'CONFIGURING', 'REQUEUED'] and 
+            if (current_state in ['PENDING', 'CONFIGURING', 'REQUEUED'] and 
                 new_output == output_pos and new_error == error_pos):
                 dots_count += 1
                 if dots_count % 80 == 0:  # Start new line every 80 dots
@@ -454,7 +550,7 @@ source $HOME/.bashrc
             error_pos = new_error
             
             # Check if job completed or failed
-            if status in ['COMPLETED', 'FAILED', 'CANCELLED', 'TIMEOUT'] or not status:
+            if current_state in ['COMPLETED', 'FAILED', 'CANCELLED', 'TIMEOUT'] or not current_state:
                 # Final read to get remaining output
                 output_pos = read_output(output_log, sys.stdout, output_pos)
                 error_pos = read_output(error_log, sys.stderr, error_pos)
