@@ -3,13 +3,14 @@
 ## Why slrun?
 
 Running jobs on SLURM shouldn’t feel like fighting the scheduler. Yet, the typical workflow is tedious:
-	1.	Write a script.
-	2.	Wrap it in a job file.
-	3.	Submit it with sbatch.
-	4.	Keep running squeue to check status.
-	5.	Dig through output files after it’s done.
+1. Write a script.
+2. Wrap it in a job file.
+3. Submit it with `sbatch`.
+4. Keep running `squeue` to check status.
+5. Dig through output files during and after it’s done.
+It's a tedious process that interrupts your workflow and focuses on cluster mechanics rather than your actual work.
 
-slrun removes the friction and makes SLURM feel like running commands on your local machine:
+**slrun** removes the friction and makes SLURM feel like running commands on your local machine:
 ```bash
 # No more job script files, just run your command:
 slrun launch python train_model.py --epochs 100
@@ -20,9 +21,9 @@ You get real-time output, can detach and reconnect, and forget about job scripts
 Why You’ll Love It
 - 🚀 **No job script files** – Run commands as if they were local
 - 📡 **Live job output** – See results instantly, no more tailing log files
--	🔌 **Detach & reattach** – Start a job, disconnect, and pick it up later
--	📊 **Simple monitoring** – One command to check all your running jobs
--	⚡ **Custom profiles** – Predefine resources for different workloads
+- 🔌 **Detach & reattach** – Start a job, disconnect, and pick it up later
+- 📊 **Simple monitoring** – One command to check all your running jobs
+- ⚡ **Custom profiles** – Predefine resources for different workloads (small, large, debug)
 
 Who’s It For?
 - **ML researchers** training models on GPU clusters who need fast iteration
@@ -30,35 +31,6 @@ Who’s It For?
 - **Academic users** who want results, not SLURM headaches
 - **Teams** sharing cluster resources who need standard configurations
 - **Anyone** running long jobs who needs to disconnect and resume later
-
-## Why slrun?
-
-Working with SLURM clusters can be frustrating. You write a script, create a job file, submit it with `sbatch`, then repeatedly check `squeue` for status, and finally dig through output files when it's done. It's a tedious process that interrupts your workflow and focuses on cluster mechanics rather than your actual work.
-
-**slrun** transforms this experience by letting you work with SLURM as if you were running commands locally:
-
-```bash
-# Instead of creating batch files and using sbatch:
-slrun launch python train_model.py --epochs 100
-```
-
-Your code runs on the cluster, but you see the output streaming in real-time. If you need to disconnect, just press `Ctrl+Z` and reconnect later with `slrun attach`. It's that simple.
-
-### Pain Points Solved
-
-- **No more job script files** - Run commands directly with minimal syntax changes
-- **Real-time feedback** - See output as it happens, not just when jobs complete
-- **Seamless workflow** - Start, monitor, detach, and reconnect without context switching
-- **Resource templates** - Define profiles for different job types (small, large, debug)
-- **Simplified monitoring** - One command to see all your detached jobs
-
-### Perfect For
-
-- **ML researchers** testing models on GPU clusters who need to iterate quickly
-- **Data scientists** who want to run resource-intensive tasks without changing their workflow
-- **Academic users** who need to submit jobs but don't want to learn SLURM's complexities
-- **Teams sharing clusters** who want standardized resource configurations
-- **Anyone** running long jobs who needs to disconnect and reconnect later
 
 ## Features
 
