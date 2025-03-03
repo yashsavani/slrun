@@ -1,4 +1,35 @@
-# slrun - SLURM Tools
+# slrun
+
+## Why slrun?
+
+Running jobs on SLURM shouldn’t feel like fighting the scheduler. Yet, the typical workflow is tedious:
+	1.	Write a script.
+	2.	Wrap it in a job file.
+	3.	Submit it with sbatch.
+	4.	Keep running squeue to check status.
+	5.	Dig through output files after it’s done.
+
+slrun removes the friction and makes SLURM feel like running commands on your local machine:
+```bash
+# No more job script files, just run your command:
+slrun launch python train_model.py --epochs 100
+```
+
+You get real-time output, can detach and reconnect, and forget about job scripts altogether. Whether you’re training ML models, running simulations, or crunching data, slrun keeps you focused on your work—not SLURM’s quirks.
+
+Why You’ll Love It
+- 🚀 **No job script files** – Run commands as if they were local
+- 📡 **Live job output** – See results instantly, no more tailing log files
+-	🔌 **Detach & reattach** – Start a job, disconnect, and pick it up later
+-	📊 **Simple monitoring** – One command to check all your running jobs
+-	⚡ **Custom profiles** – Predefine resources for different workloads
+
+Who’s It For?
+- **ML researchers** training models on GPU clusters who need fast iteration
+- **Data scientists** running large jobs without changing their workflow
+- **Academic users** who want results, not SLURM headaches
+- **Teams** sharing cluster resources who need standard configurations
+- **Anyone** running long jobs who needs to disconnect and resume later
 
 ## Why slrun?
 
