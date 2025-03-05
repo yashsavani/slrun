@@ -639,6 +639,8 @@ def launch_job(args):
         with script_path.open("w") as f:
             f.write(f"""#!/bin/bash
 export USE_BASH_FOR_SBATCH=1
+export NCCL_P2P_DISABLE=1
+export NCCL_IB_DISABLE=1
 source $HOME/.bashrc
 {conda_cmd}
 
